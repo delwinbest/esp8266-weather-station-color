@@ -27,11 +27,13 @@ See more at https://blog.squix.org
 #include <Arduino.h>
 #include <SPI.h>
 #include <ESP8266WiFi.h>
-
+#include <WiFiManager.h>
+#include <ArduinoOTA.h>
 #include <XPT2046_Touchscreen.h>
 #include "TouchControllerWS.h"
 #include "SunMoonCalc.h"
 
+#include "secrets.h" // OpenWeatherMap Settings
 
 /***
  * Install the following libraries through Arduino Library Manager
@@ -129,27 +131,12 @@ long timerPress;
 bool canBtnPress;
 time_t dstOffset = 0;
 
-void connectWifi() {
-  if (WiFi.status() == WL_CONNECTED) return;
-  //Manual Wifi
-  Serial.print("Connecting to WiFi ");
-  Serial.print(WIFI_SSID);
-  Serial.print("/");
-  Serial.println(WIFI_PASS);
-  WiFi.disconnect();
-  WiFi.mode(WIFI_STA);
-  WiFi.hostname(WIFI_HOSTNAME);
-  WiFi.begin(WIFI_SSID,WIFI_PASS);
-  int i = 0;
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    if (i>80) i=0;
-    drawProgress(i,"Connecting to WiFi '" + String(WIFI_SSID) + "'");
-    i+=10;
-    Serial.print(".");
-  }
-  drawProgress(100,"Connected to WiFi '" + String(WIFI_SSID) + "'");
-  Serial.print("Connected...");
+//gets called when WiFiManager enters configuration mode
+void configModeCallback (WiFiManager *myWiFiManager) {
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
+  //if you used auto generated SSID, print it
+  Serial.println(myWiFiManager->getConfigPortalSSID());
 }
 
 void setup() {
@@ -167,8 +154,25 @@ void setup() {
   gfx.fillBuffer(MINI_BLACK);
   gfx.commit();
 
-  connectWifi();
+  //WiFiManager
+  //Local intialization. Once its business is done, there is no need to keep it around
+  WiFiManager wm;
+  drawProgress(50,"Connecting to WiFi");
+  //reset settings - for testing
+  // wm.resetSettings();
+  //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+  wm.setAPCallback(configModeCallback);
 
+  //fetches ssid and pass and tries to connect
+  //if it does not connect it starts an access point with the specified name
+  //here  "AutoConnectAP"
+  //and goes into a blocking loop awaiting configuration
+  if (!wm.autoConnect()) {
+    Serial.println("failed to connect and hit timeout");
+    //reset and try again, or maybe put it to deep sleep
+    ESP.restart();
+    delay(1000);
+  }
   Serial.println("Initializing touch screen...");
   ts.begin();
   
@@ -204,6 +208,39 @@ void setup() {
   updateData();
   timerPress = millis();
   canBtnPress = true;
+  WiFi.hostname(WIFI_HOSTNAME);
+
+  ArduinoOTA.setHostname(WIFI_HOSTNAME);
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else // U_SPIFFS
+      type = "filesystem";
+
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    Serial.println("Start updating " + type);
+    gfx.fillBuffer(MINI_BLACK);
+    gfx.setFont(ArialRoundedMTBold_14);
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    drawProgress((progress / (total / 100)), "OTA Update...");
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) { Serial.println("Auth Failed"); drawProgress(0, "ERROR: OTA Auth Failed"); }
+    else if (error == OTA_BEGIN_ERROR) { Serial.println("Begin Failed"); drawProgress(0, "ERROR: OTA Begin Failed"); }
+    else if (error == OTA_CONNECT_ERROR) { Serial.println("Connect Failed"); drawProgress(0, "ERROR: OTA Connect Failed"); }
+    else if (error == OTA_RECEIVE_ERROR) { Serial.println("Receive Failed"); drawProgress(0, "ERROR: OTA Receive Failed"); }
+    else if (error == OTA_END_ERROR) { Serial.println("End Failed"); drawProgress(0, "ERROR: OTA Auth Failed"); }
+  });
+
+  ArduinoOTA.begin();
+  
 }
 
 long lastDrew = 0;
@@ -212,6 +249,7 @@ uint8_t MAX_TOUCHPOINTS = 10;
 TS_Point points[10];
 uint8_t currentTouchPoint = 0;
 void loop() {
+  ArduinoOTA.handle();
   gfx.fillBuffer(MINI_BLACK);
   if (touchController.isTouched(0)) {
     TS_Point p = touchController.getPoint();

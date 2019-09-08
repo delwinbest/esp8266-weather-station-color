@@ -21,9 +21,7 @@ See more at http://blog.squix.ch
 #include <simpleDSTadjust.h>
 
 // Setup
-#define WIFI_SSID "yourssid"
-#define WIFI_PASS "yourpassw0rd"
-#define WIFI_HOSTNAME "ThingPulse-weather-station-color"
+#define WIFI_HOSTNAME "weather-station-color"
 
 const int UPDATE_INTERVAL_SECS = 10 * 60; // Update every 10 minutes
 const int SLEEP_INTERVAL_SECS = 0;        // Going to sleep after idle times, set 0 for insomnia
@@ -31,15 +29,15 @@ const int SLEEP_INTERVAL_SECS = 0;        // Going to sleep after idle times, se
 
 // OpenWeatherMap Settings
 // Sign up here to get an API key: https://docs.thingpulse.com/how-tos/openweathermap-key/
-String OPEN_WEATHER_MAP_APP_ID = "";
+//String OPEN_WEATHER_MAP_APP_ID = ""; //Moved this to secrest.h
 /*
 Go to https://openweathermap.org/find?q= and search for a location. Go through the
 result set and select the entry closest to the actual location you want to display 
 data for. It'll be a URL like https://openweathermap.org/city/2657896. The number
 at the end is what you assign to the constant below.
  */
-String OPEN_WEATHER_MAP_LOCATION_ID = "2657896";
-String DISPLAYED_CITY_NAME = "Zurich";
+String OPEN_WEATHER_MAP_LOCATION_ID = "1852140";
+String DISPLAYED_CITY_NAME = "Shinagawa";
 /*
 Arabic -> ar, Bulgarian -> bg, Catalan -> ca, Czech -> cz, German -> de, Greek -> el,
 English -> en, Persian (Farsi) -> fa, Finnish -> fi, French -> fr, Galician -> gl,
@@ -59,9 +57,9 @@ const String SUN_MOON_TEXT[] = {"Sun", "Rise", "Set", "Moon", "Age", "Illum"};
 const String MOON_PHASES[] = {"New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
                               "Full Moon", "Waning Gibbous", "Third quarter", "Waning Crescent"};
 
-#define UTC_OFFSET +1
-struct dstRule StartRule = {"CEST", Last, Sun, Mar, 2, 3600}; // Central European Summer Time = UTC/GMT +2 hours
-struct dstRule EndRule = {"CET", Last, Sun, Oct, 2, 0};       // Central European Time = UTC/GMT +1 hour
+#define UTC_OFFSET +9
+struct dstRule StartRule = {"JST", Last, Sun, Mar, 2, 0}; // no dst in JP
+struct dstRule EndRule = {"JST", Last, Sun, Oct, 2, 0}; 
 
 // Settings for Boston
 // #define UTC_OFFSET -5
