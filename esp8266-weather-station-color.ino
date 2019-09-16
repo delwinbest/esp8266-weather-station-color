@@ -128,8 +128,11 @@ long lastDownloadUpdate = millis();
 
 uint16_t screen = 0;
 long timerPress;
+long timerScreen;
 bool canBtnPress;
 time_t dstOffset = 0;
+const int DISPLAY_INTERVAL_SECS_DEFAULT = 5;      // interfavl to switch screens
+int DISPLAY_INTERVAL_SECS = DISPLAY_INTERVAL_SECS_DEFAULT;
 
 //gets called when WiFiManager enters configuration mode
 void configModeCallback (WiFiManager *myWiFiManager) {
@@ -207,6 +210,7 @@ void setup() {
   // update the weather information
   updateData();
   timerPress = millis();
+  timerScreen = millis();
   canBtnPress = true;
   WiFi.hostname(WIFI_HOSTNAME);
 
@@ -252,6 +256,8 @@ void loop() {
   ArduinoOTA.handle();
   gfx.fillBuffer(MINI_BLACK);
   if (touchController.isTouched(0)) {
+    DISPLAY_INTERVAL_SECS = 0;
+    timerScreen = millis();
     TS_Point p = touchController.getPoint();
 
     if (p.y < 80) {
@@ -291,16 +297,26 @@ void loop() {
       lastDownloadUpdate = millis();
   }
 
+  if (DISPLAY_INTERVAL_SECS && millis() - timerScreen >= DISPLAY_INTERVAL_SECS * 1000) { 
+    screen++;
+    if (screen >= 2) {
+      screen = 0;
+    }
+    timerScreen = millis();                       
+  } 
+
   if (SLEEP_INTERVAL_SECS && millis() - timerPress >= SLEEP_INTERVAL_SECS * 1000){ // after 2 minutes go to sleep
-    drawProgress(25,"Going to Sleep!");
-    delay(1000);
-    drawProgress(50,"Going to Sleep!");
-    delay(1000);
-    drawProgress(75,"Going to Sleep!");
-    delay(1000);    
-    drawProgress(100,"Going to Sleep!");
-    // go to deepsleep for xx minutes or 0 = permanently
-    ESP.deepSleep(0,  WAKE_RF_DEFAULT);                       // 0 delay = permanently to sleep
+    DISPLAY_INTERVAL_SECS = DISPLAY_INTERVAL_SECS_DEFAULT;
+    // drawProgress(25,"Going to Sleep!");
+    // delay(1000);
+    // drawProgress(50,"Going to Sleep!");
+    // delay(1000);
+    // drawProgress(75,"Going to Sleep!");
+    // delay(1000);    
+    // drawProgress(100,"Going to Sleep!");
+    // // go to deepsleep for xx minutes or 0 = permanently
+    // ESP.deepSleep(0,  WAKE_RF_DEFAULT);
+    // delay(200);                       // 0 delay = permanently to sleep
   }  
 }
 

@@ -24,7 +24,7 @@ See more at http://blog.squix.ch
 #define WIFI_HOSTNAME "weather-station-color"
 
 const int UPDATE_INTERVAL_SECS = 10 * 60; // Update every 10 minutes
-const int SLEEP_INTERVAL_SECS = 0;        // Going to sleep after idle times, set 0 for insomnia
+const int SLEEP_INTERVAL_SECS = 30;        // Going to sleep after idle times, set 0 for insomnia
 
 
 // OpenWeatherMap Settings
